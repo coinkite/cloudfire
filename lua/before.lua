@@ -31,6 +31,7 @@ function send_away()
 	-- clear any junk cookies, old sessions, etc
 	ngx.header['Set-Cookie'] = { 'FID=DELETED; HttpOnly; Secure; Path=/; Max-Age=-100', 
 									'FID=DELETED; HttpOnly; Path=/; Max-Age=-100'}
+	set_no_cache()
 
 	local prefix = get_url_prefix()
 	if prefix == '/static' then
@@ -64,8 +65,8 @@ function send_away()
 		end
 	end
 
-	ngx.say('SEED="' .. seed .. '"')
-	ngx.say('TARGET="' .. TARGET_VALUE .. '"')
+	ngx.say('SEED="' .. seed .. '";')
+	ngx.say('TARGET="' .. TARGET_VALUE .. '";')
 	ngx.say(browser_check_js)
 	ngx.say('</script></body></html')
 

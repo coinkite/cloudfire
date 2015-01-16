@@ -1,6 +1,7 @@
 -- called by init_by_lua_file once, at server startup
 --
 cjson = require "cjson"
+redis = require "redis"
 
 local tmp = io.open('lua/b-check.html', 'r'):read('*all')
 browser_check_html = string.gsub(tmp, "<!--.--->", "")	-- special .- lua construct there
@@ -8,6 +9,9 @@ browser_check_html = string.gsub(tmp, "<!--.--->", "")	-- special .- lua constru
 tmp = io.open('lua/b-check.js', 'r'):read('*all')
 tmp = tmp .. io.open('lua/libs.js', 'r'):read('*all')
 browser_check_js = string.gsub(tmp, '//.-\n', '')
+
+local tmp = io.open('lua/errors.html', 'r'):read('*all')
+errors_html = string.gsub(tmp, "<!--.--->", "")	-- special .- lua construct there
 
 function LOG(msg)
 	ngx.log(ngx.ERR, msg)
@@ -43,4 +47,11 @@ end
 function pick_token()
 	-- random short string for use as seed or whatever
 	return ndk.set_var.set_secure_random_alphanum(32)
+end
+
+function set_no_cache()
+	-- add header lines to prevent caching
+	ngx.header["Cache-Control"] = "no-cache, no-store, must-revalidate"
+	ngx.header["Pragma"] = "no-cache"
+	ngx.header["Expires"] = "0"
 end

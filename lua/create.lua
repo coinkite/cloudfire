@@ -8,13 +8,13 @@ local hdrs = ngx.req.get_headers()
 
 -- expecting an Ajax GET
 if hdrs.x_requested_with ~= "XMLHttpRequest" then
-	LOG("req with = " .. ngx.http_x_requested_with)
+	LOG("Not XMLHttpReq")
 	ngx.exit(405)
 end
 
 args, err = ngx.req.get_uri_args(3)
 if err then
-	LOG("Bad args: " .. err)
+	LOG("Bad args")
 	ngx.exit(403)
 end
 
@@ -22,12 +22,12 @@ local got_seed = args.seed
 local got_pow = args.pow
 local got_target = args.target
 
-LOG("Submission: pow=" .. args.pow .. "  seed=".. args.seed)
-
-if not got_pow or not got_seed then
+if not got_pow or not got_seed or not got_target then
 	LOG("Missing pow/seed")
 	ngx.exit(403)
 end
+
+LOG("Submission: pow=" .. args.pow .. "  seed=".. args.seed)
 
 -- validate they did the RIGHT work.
 local ip_addr = ngx.var.remote_addr
@@ -64,20 +64,22 @@ if not ok then
 	ngx.exit(400)
 end
 if overflowed then
-	-- just for debug; consequence is someone sees the browser-check an extra time
+	-- just for debug; consequence is someone (else) sees the browser-check an extra time
 	LOG("Session table overflowed!")
 end
 	
 -- grant the blessed cookie
-local baked = 'FID='.. sid ..'; HttpOnly; Path=/; Max-Age=' .. SESSION_LIFETIME
+-- NOTE: Do not set Domain or Path here, so applies to whole site.
+local baked = 'FID='.. sid ..'; HttpOnly; Max-Age=' .. SESSION_LIFETIME
 if ngx.var.https == 'on' then
 	baked = baked .. '; Secure'
 end
 ngx.header['Set-Cookie'] = baked
+set_no_cache()
 
--- return a JSON object
+-- return a simple string (can be empty)
 
--- MAYBE: have a provision here to redirect to another page, like "site down", etc.
+-- MAYBE: we have a provision here to redirect to another page, like "site down", etc.
 -- but better to do at a higher level or in more general way. Just return a URL instead of empty
 -- ngx.say('/hello')
 ngx.say('')

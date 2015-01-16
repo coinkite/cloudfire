@@ -33,7 +33,6 @@ $(function() {
 		var resp = mint(SEED, TARGET);
 		
 		$.ajax({type: "GET", url: "/___", data: resp}).done(function(data) {
-			console.log("Resp: ", data);
 			window.location.replace(data || window.location.href);
 		})
 		.fail(function() {
