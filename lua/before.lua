@@ -4,30 +4,35 @@
 -- Dox here: https://github.com/openresty/lua-nginx-module#nginx-api-for-lua
 --
 
-local old_cookie = ngx.var.cookie_fid
-local hdrs = ngx.req.get_headers()
-local cjson = require "cjson"
 local url = ngx.var.uri
 
+-- local hdrs = ngx.req.get_headers()
 -- ngx.log(ngx.ERR, "BEFORE val = " .. cjson.encode(hdrs))
-ngx.log(ngx.ERR, "BEFORE val = " .. url)
+-- ngx.log(ngx.ERR, "BEFORE val = " .. url)
 
-local got_a = ngx.cookie_fi_a
-local got_b = ngx.cookie_fi_b
-local got_c = ngx.cookie_fi_c
+function get_url_prefix()
+	local from, to = ngx.re.find(url, "/[a-z0-9_]*")
+	if from then
+		return string.sub(url, from, to)
+	end
 
-local from, to = ngx.re.find(url, "/[a-z0-9_]*")
-if from then
-	prefix = string.sub(url, from, to)
-else
-	prefix = '/'
+	return '/'
 end
-ngx.log(ngx.ERR, "Prefix: " .. prefix)
 
-if not got_a or not got_b or not got_c then
+function send_away()
 	-- missing cookie(s)
 	-- can't work
 
+	-- Must set headers before first part of body
+
+	-- send some html, customized for this visitor
+	--ngx.req.set_header('Content-Type', 'text/html; charset=utf-8')
+	ngx.header['Content-Type'] = 'text/html; charset=utf-8'
+	-- clear any junk cookies, old sessions, etc
+	ngx.header['Set-Cookie'] = { 'FID=DELETED; HttpOnly; Secure; Path=/; Max-Age=-100', 
+									'FID=DELETED; HttpOnly; Path=/; Max-Age=-100'}
+
+	local prefix = get_url_prefix()
 	if prefix == '/static' then
 		-- if it's a static object, fail now with 401 because giving them html won't work
 		ngx.exit(403)
@@ -36,11 +41,47 @@ if not got_a or not got_b or not got_c then
 		ngx.exit(403)
 	end
 
-	-- send some html, customized for this visitor
-	ngx.req.set_header('Content-Type', 'text/html')
+
+	-- Send body
 	ngx.say(browser_check_html)
-	ngx.say('AAA="sdfsdf"')
+	local ip_addr = ngx.var.remote_addr
+	local old_seed, unused = seed_table:get(ip_addr)
+	if old_seed then
+		-- force them to keep same seed if coming from same IP; limits the damage of
+		-- flood from single IP addr
+		seed = old_seed
+	else
+		-- new random seed
+		seed = pick_token()
+
+		-- add to see table, but with limited lifetime
+		ok, err = seed_table:safe_set(ngx.var.remote_addr, seed, 30)
+		if not ok then
+			-- this is ok, just means we're being flooded a bit
+			-- we will recover as seeds expire from the table
+			LOG("Out of space in seed table: " .. err)
+			ngx.exit(429)
+		end
+	end
+
+	ngx.say('SEED="' .. seed .. '"')
+	ngx.say('TARGET="' .. TARGET_VALUE .. '"')
 	ngx.say(browser_check_js)
 	ngx.say('</script></body></html')
+
+
 	ngx.exit(200)
 end
+
+local got_fid = ngx.var.cookie_fid
+
+if not got_fid or got_fid:len() > 80 or got_fid:len() < 16 then
+	-- had no (FI) session cookie
+	send_away()
+end
+
+ok, err, overflowed = session_table:set(sid, ngx.var.remote_addr, SESSION_LIFETIME)
+
+
+-- check if valid session. They are time limited.
+

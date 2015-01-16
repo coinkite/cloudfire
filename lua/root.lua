@@ -7,6 +7,9 @@ local hdrs = ngx.req.get_headers()
 local cookie_name = 'FID'
 local old_cookie = ngx.var.cookie_fid;
 
+-- must be before any content
+ngx.header['Content-Type'] = 'text/html; charset=utf-8'
+
 ngx.say("<pre>")
 ngx.say("today = " .. ngx.time())
 ngx.say("host = " .. hdrs.host)
