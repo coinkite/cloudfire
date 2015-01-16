@@ -43,21 +43,22 @@ end
 
 -- kill old seed so can only be tested once
 seed_table:delete(ip_ddr)
+
 if got_target ~= TARGET_VALUE then
 	-- todo: handle changes to target on the fly
 	LOG("Wrong target: " .. got_target)
 	ngx.exit(403)
 end
 
-ok = check_pow(got_seed, got_pow, got_target)
+local ok = check_pow(got_seed, got_pow, got_target)
 if not ok then
 	LOG("POW work failed: " .. got_target)
 	ngx.exit(403)
 end
 
 -- give them a working session, they are cool
-sid = pick_token()
-ok, err, overflowed = session_table:set(sid, ngx.var.remote_addr, SESSION_LIFETIME)
+local sid = pick_token()
+local ok, err, overflowed = session_table:set(sid, ngx.var.remote_addr, SESSION_LIFETIME)
 if not ok then
 	LOG("Session create failed: " .. err)
 	ngx.exit(400)
@@ -68,11 +69,17 @@ if overflowed then
 end
 	
 -- grant the blessed cookie
-baked = 'FID='.. sid ..'; HttpOnly; Path=/; Max-Age=' .. SESSION_LIFETIME
+local baked = 'FID='.. sid ..'; HttpOnly; Path=/; Max-Age=' .. SESSION_LIFETIME
 if ngx.var.https == 'on' then
 	baked = baked .. '; Secure'
 end
 ngx.header['Set-Cookie'] = baked
 
+-- return a JSON object
 
--- if we reach the end, it's ok .. 200 will be returned
+-- MAYBE: have a provision here to redirect to another page, like "site down", etc.
+-- but better to do at a higher level or in more general way. Just return a URL instead of empty
+-- ngx.say('/hello')
+ngx.say('')
+
+-- impt: must return a 200 only if ok; else client may keep trying

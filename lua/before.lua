@@ -80,8 +80,12 @@ if not got_fid or got_fid:len() > 80 or got_fid:len() < 16 then
 	send_away()
 end
 
-ok, err, overflowed = session_table:set(sid, ngx.var.remote_addr, SESSION_LIFETIME)
-
+local ok, unused_flags = session_table:get(got_fid)
+if not ok then
+	-- has unknown / stale / fake session token
+	LOG("Unknown session: " .. got_fid)
+	send_away()
+end
 
 -- check if valid session. They are time limited.
 

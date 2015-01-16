@@ -16,7 +16,7 @@ function die_now(msg) {
 }
 
 function mint(seed, target) {
-	var idx = 0, i;
+	var idx = 0;
 	for(idx=0; idx<100000; idx++) {
 		var m = seed + '.' + idx;
 		var here = CryptoJS.SHA1(m).toString(), score = 0;
@@ -33,12 +33,17 @@ $(function() {
 		var resp = mint(SEED, TARGET);
 		
 		$.ajax({type: "GET", url: "/___", data: resp}).done(function(data) {
-			window.location.replace(window.location.href);
+			console.log("Resp: ", data);
+			window.location.replace(data || window.location.href);
 		})
 		.fail(function() {
 			die_now("You are blocked from this site.");
 		});
 	}, 500);
+
+	window.setTimeout(function() {
+		die_now("You have been blocked from this site.");
+	}, 5000);
 });
 
 
