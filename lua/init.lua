@@ -20,6 +20,7 @@ end
 -- shared objects for LUA code
 session_table = ngx.shared.sessions
 seed_table = ngx.shared.seeds
+config_table = ngx.shared.config
 
 -- Must be a number in in lower-case hex. Might change at run-time to 
 -- slow down visitors
@@ -27,7 +28,17 @@ TARGET_VALUE = '0beef'
 
 SESSION_LIFETIME = 604800		-- one week in seconds
 
-ngx.log(ngx.INFO, 'LUA code init done')
+-- PW will change at runtime
+local oldpw, _ = config_table:get('passwd')
+if not oldpw then
+	ngx.log(ngx.INFO, 'RESET system password')
+	config_table:set('passwd', 'hello')
+end
+
+--
+-- Some useful functions
+--
+
 
 function check_pow(seed, pow, target)
 	-- validate our proof-of-work: SHA1 of seed should contain hex value "target"
@@ -55,3 +66,14 @@ function set_no_cache()
 	ngx.header["Pragma"] = "no-cache"
 	ngx.header["Expires"] = "0"
 end
+
+function kill_session()
+	-- kill current session so they will have to re-prove themselves (also rate limits)
+	fid = ngx.ctx.ACTIVE_FID
+	if fid then
+		session_table:delete(fid)
+	end
+end
+
+
+ngx.log(ngx.INFO, 'LUA code init done')

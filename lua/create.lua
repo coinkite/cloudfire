@@ -77,11 +77,15 @@ end
 ngx.header['Set-Cookie'] = baked
 set_no_cache()
 
+-- rate limit delay, although consumes resources on our end
+ngx.sleep(1)
+
 -- return a simple string (can be empty)
 
 -- MAYBE: we have a provision here to redirect to another page, like "site down", etc.
--- but better to do at a higher level or in more general way. Just return a URL instead of empty
--- ngx.say('/hello')
+-- but better to do at a higher level or in more general way, so you can return a
+-- URL instead of empty
+-- ngx.say('/site-down')
 ngx.say('')
 
 -- impt: must return a 200 only if ok; else client may keep trying

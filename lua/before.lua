@@ -88,5 +88,8 @@ if not ok then
 	send_away()
 end
 
+-- record provided session token for later need
+ngx.ctx.ACTIVE_FID = got_fid
+
 -- check if valid session. They are time limited.
 

@@ -1,7 +1,6 @@
 #!/bin/sh
 #
 #
-
 if ! redis-cli -s redis.sock info > /dev/null ; then
     echo "Restarting redis"
     redis-server redis.conf &
