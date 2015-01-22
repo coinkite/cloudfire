@@ -28,6 +28,8 @@ if cmd == 'newpw' and args.newpw then
 	local s, e, f = config_table:set('passwd', args.newpw)
 	LOG('System pw changed')
 	ngx.say("New password applied")
+elseif cmd == 'ping' then
+	ngx.say("Pong")
 elseif cmd == 'reload' then
 	LOG('Reload server')
 	os.execute('killall -v -HUP nginx')

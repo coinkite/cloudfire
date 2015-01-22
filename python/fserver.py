@@ -35,6 +35,8 @@ class MyWSGIServer(WSGIServer):
 def start_server(ip, port, debug):
 	from example_app import app
 
+	app.debug = True
+
 	if debug:
 		app.run(host="0.0.0.0", port=port)
 	else:

@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 #
-import os, sys, re
+import os, sys, re, requests
 from redis import Redis
 import click
 from hashlib import md5 as MD5
 from mimetypes import guess_type, guess_extension
+from urlparse import urlparse
 
 MIN_Q_SIZE = 8000
 RDB = None
@@ -16,6 +17,11 @@ def blacklist_filename(fn):
 
 def log_path(url, msg):
 	click.echo("%-50.50s %s" % (url, msg))
+
+def url_to_key(host, absurl):
+	assert absurl[0] == '/'
+	assert host
+	return '%s|%s' % (host.lower(), absurl)
 
 @click.group()
 @click.option('--sock', default='~/redis.sock')
@@ -30,16 +36,15 @@ def cli(sock, redis):
 		RDB = Redis(unix_socket_path=os.path.expanduser(hostname=redis))
 	
 
-@cli.command('single')
-@click.option('--host', '-h', default="lh")
+@cli.command('single', help="Upload a single file as response for specific URL")
+@click.option('--host', '-i', default="lh")
 @click.argument('fd', type=click.File('rb'))
 @click.argument('absurl')
 def single(host, fd, absurl):
 	upload_file(host, fd, absurl)
 
 def upload_file(host, fd, absurl):
-	assert absurl[0] == '/'
-	rk = '%s|%s' % (host, absurl)
+	rk = url_to_key(host, absurl)
 	content = fd.read()
 	rv = {}
 
@@ -70,13 +75,13 @@ def upload_file(host, fd, absurl):
 			log_path(absurl, 'skipped (got it)')
 
 	rv['Content-Type'] = ct + ('' if not enc else '; charset="%s"' % enc)
-	print "%s => %r" % (rk, rv)
+	#print "%s => %r" % (rk, rv)
 	RDB.hmset(rk, rv)
 
 	
 
-@cli.command()
-@click.option('--host', '-h', default="lh")
+@cli.command(help="Upload a tree of files")
+@click.option('--host', '-i', default="lh")
 @click.option('--baseurl', '-u',  default='/')
 @click.argument('topdir', type=click.Path(exists=True))
 def multi(host, baseurl, topdir):
@@ -93,14 +98,54 @@ def multi(host, baseurl, topdir):
 			#print '%s => %s' % (fname, url)
 			upload_file(host, click.open_file(fname), url)
 
-@cli.command()
-def flush()
+	click.echo("Remember: You still need to tell server to save the files, see 'write' cmd")
+
+@cli.command(help="Reset entire redis database!")
+def flushdb():
 	RDB.flushdb()
 	click.echo("Wiped database")
 
+@cli.command(help="List defined urls for host")
+@click.option('--wipe', '-w', is_flag=True, help="Wipe them.")
+@click.argument('host')
+def list(host, wipe):
+	keys = RDB.keys(host + '|/*')
+	if not keys:
+		click.echo("No matches. Nothing stored for that host: '%s'" % host)
+		return
+
+	click.echo("Existing paths:")
+	for k in keys:
+		click.echo("  %s" % k)
+
+	if wipe:
+		RDB.delete(*keys)
+		click.echo("\nWiped them.")
+
+@cli.command(help="Setup a redirect")
+@click.option('--host', '-i', default="lh")
+@click.option('--code', '-c', default=302)
+@click.argument('from_url', metavar="FROM")
+@click.argument('to')			# help="Can be relative or absolute"
+def redirect(host, code, from_url, to):
+	parts = urlparse(from_url)
+	rk = url_to_key(parts.netloc or host, parts.path)
+	rv = {}
+		
+	rv['_redirect'] = to
+	rv['_code'] = code
+	RDB.delete(rk)
+	RDB.hmset(rk, rv)
+
+	click.echo("Added: %s => %s" % (from_url, to))
+
+@cli.command(help="Commit uploaded files to disk cache")
+@click.option('--password', '-p',  default='hello')
+def write(password):
+	r = requests.get('http://localhost/__A__/save?pw=%s' % password)
+	print r.content
+
 if __name__ == '__main__':
 	cli()
-	# You still need to tell lua to save the new files.
-	click.echo("Remeber: /__A__/save?pw=hello")
 
 # EOF

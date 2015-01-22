@@ -12,6 +12,8 @@ browser_check_js = string.gsub(tmp, '//.-\n', '')
 
 local tmp = io.open('lua/errors.html', 'r'):read('*all')
 errors_html = string.gsub(tmp, "<!--.--->", "")	-- special .- lua construct there
+local tmp = io.open('lua/placeholder.html', 'r'):read('*all')
+placeholder_html = string.gsub(tmp, "<!--.--->", "")	-- special .- lua construct there
 
 function LOG(msg)
 	ngx.log(ngx.ERR, msg)
