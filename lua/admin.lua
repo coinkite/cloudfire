@@ -32,7 +32,7 @@ elseif cmd == 'reload' then
 	LOG('Reload server')
 	os.execute('killall -v -HUP nginx')
 elseif cmd == 'save' then
-	-- save larger files into disk "cache"
+	-- save larger files onto disk "cache"
 	LOG('Transfering files')
 	local RDB = get_RDB()
 
@@ -45,6 +45,7 @@ elseif cmd == 'save' then
 			ngx.say(fname)
 			local fd = io.open('static/' .. fname, 'w'):write(data)
 			RDB:hdel('new_files', fname)
+			RDB:sadd('all_files', fname)
 		end
 	end
 elseif cmd == 'read' and args.host then
