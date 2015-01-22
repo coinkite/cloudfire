@@ -1,12 +1,5 @@
 -- see: https://github.com/openresty/lua-nginx-module#nginx-api-for-lua
 
-local RDB = redis.new()
-ok, err = RDB:connect('unix:redis.sock')
-if not ok then
-	LOG("RDB no connect: " .. err)
-	ngx.exit(503)
-end
-
 -- must be before any content
 local hdrs = ngx.req.get_headers()
 set_no_cache()
@@ -37,9 +30,43 @@ if cmd == 'newpw' and args.newpw then
 	ngx.say("New password applied")
 elseif cmd == 'reload' then
 	LOG('Reload server')
-	--ngx.say(os.execute('kill -HUP ' .. ngx.var.pid))
-	ngx.say(os.execute('env'))
-	ngx.say(cjson.encode(ngx.ctx))
+	os.execute('killall -v -HUP nginx')
+elseif cmd == 'save' then
+	-- save larger files into disk "cache"
+	LOG('Transfering files')
+	local RDB = get_RDB()
+
+	local additions, err = RDB:hgetall('new_files')
+	if err then
+		ngx.say("Problem.")
+	else
+		additions = RDB:array_to_hash(additions)
+		for fname, data in pairs(additions)  do
+			ngx.say(fname)
+			local fd = io.open('static/' .. fname, 'w'):write(data)
+			RDB:hdel('new_files', fname)
+		end
+	end
+elseif cmd == 'read' and args.host then
+	local RDB = get_RDB()
+	local hm = args.host
+	local hits = RDB:keys(hm .. '|*')
+
+	ngx.say(cjson.encode(hits))
+		
+elseif cmd == 'upload' then
+	-- expecting a few args, and POST of a json document
+	if ngx.req.method ~= 'POST' then
+		ngx.exit(403)
+	end
+	ngx.req.read_body()
+	keys = cjson.decode(ngx.req.get_body_data())
+	local RDB = get_RDB()
+	for key, val in pairs(keys) do
+		RDB:hmset(key, val)
+		ngx.say("set " .. key)
+	end
+		
 elseif cmd == 'execute' and args.cmd then
 	LOG('Execute: ' .. args.cmd)
 	ngx.say(os.execute('kill -HUP ' .. ngx.var.pid))

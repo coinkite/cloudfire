@@ -34,8 +34,8 @@ function send_away()
 	set_no_cache()
 
 	local prefix = get_url_prefix()
-	if prefix == '/static' then
-		-- if it's a static object, fail now with 401 because giving them html won't work
+	if prefix == '/__S__' then
+		-- if it's a static object, fail now because giving them html won't work
 		ngx.exit(403)
 	end
 	if ngx.req.method == 'POST' then

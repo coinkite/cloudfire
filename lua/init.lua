@@ -75,5 +75,17 @@ function kill_session()
 	end
 end
 
+function get_RDB()
+	-- get per-ctx link to redis
+	local RDB = redis.new()
+	ok, err = RDB:connect('unix:redis.sock')
+	if not ok then
+		LOG("RDB can't connect: " .. err)
+		ngx.exit(503)
+
+	end
+
+	return RDB
+end
 
 ngx.log(ngx.INFO, 'LUA code init done')
