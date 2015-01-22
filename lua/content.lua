@@ -21,7 +21,8 @@ RDB:zincrby('activity', 1, rkey)
 local values, err = RDB:hgetall(rkey)
 if err or #values == 0 then
 	LOG("Error/404 rkey = " .. rkey)
-	ngx.exit(404)
+	-- ngx.exit(404)
+	ngx.exec('@fastcgi')
 end
 
 -- redis.lua code returns the redis list aka array as
