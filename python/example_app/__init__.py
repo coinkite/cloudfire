@@ -9,7 +9,7 @@ def ws_test():
 <title>WebSocket Test</title>
 <script language="javascript" type="text/javascript">
   //var wsUri = "ws://echo.websocket.org/";
-  var wsUri = "ws://lh:8800/___WS/abc";
+  var wsUri = "ws://lh:8800/___WS?abc";
   var output;
 	function init() {
 		output = document.getElementById("output");
