@@ -21,15 +21,13 @@ local wsid = pick_token()
 
 local function die(msg, fid, wsid)
 	-- connection is over.
-	LOG("WS die: " .. msg)
+	LOG(wsid .. ": WS die: " .. msg)
 	wb:send_close()
 
-	-- clean up records; might not be rock solid
-	LOG("fid = " .. fid)
-	LOG("wsid = " .. wsid)
-
-	-- must unsubscribe first
+	-- must unsubscribe first! Can't do redis otherwise.
 	RDB:unsubscribe()
+
+	-- clean up records; might not be rock solid, but okay
 	RDB:lrem('sockets|' .. fid, 0, wsid)
 	RDB:del('sockets|wsid|', wsid)
 	RDB:srem('sockets', wsid)
@@ -58,6 +56,31 @@ RDB:hmset('sockets|wsid|' .. wsid, status)
 
 wb:send_text(cjson.encode(status))
 
+-- see https://github.com/openresty/lua-resty-websocket/issues/1#issuecomment-24816008
+local function client_rx(wb, fid, wsid)
+	LOG("listen on ", wsid)
+	local RDB = get_RDB()
+
+	wb:set_timeout(0)
+	while true do
+		local bytes, typ, err = wb:recv_frame()
+		if wb.fatal or err then
+			LOG("rx err: ", err)
+			return die("ws error", fid, wsid)
+		elseif typ == "close" then
+			return die("client close", fid, wsid)
+		elseif typ == "text" then
+			LOG("rx=" ..  bytes)
+			RDB:rpush("websocket_rx", cjson.encode({wsid=wsid, msg=bytes}))
+		end
+	end
+end
+
+-- start another thread is listen for traffic from caller
+ngx.thread.spawn(client_rx, wb, fid, wsid)
+
+
+-- SUBSCRIBE -- cannot do normal redis after this.
 local ok, err = RDB:subscribe("bcast", fid,
 								"chan|"..subchan,
 								"wsid|"..wsid
@@ -81,7 +104,7 @@ while true do
 	LOG("Got msg: " .. mtype)
 
  	if mtype == "message" then
- 		-- normal traffic on the channel
+ 		-- normal traffic on the channel; copy to websocket
  		local ok, err = wb:send_text(msg)
  		if not ok then
  			die("Couldn't write: " .. err, fid, wsid)
