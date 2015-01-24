@@ -37,7 +37,7 @@ STATE.die = function(STATE, msg)
 	RDB:del('sockets|wsid|', STATE.wsid)
 	RDB:srem('sockets', STATE.wsid)
 	if STATE.report then
-		STATE:report(RDB, nil, True)
+		STATE:report(RDB, nil, "CLOSE")
 	end
 
 	return ngx.exit(ngx.OK)
@@ -56,10 +56,10 @@ RDB:hmset('sockets|wsid|' .. wsid, public_state)
 wb:send_text(cjson.encode(public_state))
 
 -- internal "methods". don't want to record these into redis tho
-STATE.report = function(STATE, XRDB, raw, is_closed)
+STATE.report = function(STATE, XRDB, raw, state_changed)
 	m = { wsid=STATE.wsid, fid=STATE.fid }
-	if is_closed then
-		m.state = 'CLOSED'
+	if state_changed then
+		m.state = special
 	else
 		m.msg = raw
 	end
@@ -94,6 +94,7 @@ end
 -- start another thread is listen for traffic from caller
 ngx.thread.spawn(client_rx, STATE)
 
+STATE:report(RDB, nil, "OPEN")
 
 -- SUBSCRIBE -- cannot do normal redis after this.
 local ok, err = RDB:subscribe("bcast", 

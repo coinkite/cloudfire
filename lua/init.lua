@@ -106,16 +106,23 @@ function get_vhostname()
 		-- cached copy
 		return ngx.ctx.vhostname
 	else
+		-- remove port number
 		local rv = ngx.re.sub(ngx.var.host or '', "^(.*?)((:\\d*)|)$", "$1"):lower()
 
+		-- some simple aliases
 		if rv == '' then
 			rv = 'none'
 		elseif rv == 'lh' or rv == 'localhost' or rv == '127.0.0.1' then
 			rv = 'lh'
 		end
 
+		-- MAYBE: map provided vhostname into a known value, might remove www. prefix
+		-- and also map subdomains into a tld (foo.com) if desired. Needs to be configurable
+
 		-- save.
 		ngx.ctx.vhostname = rv
+		-- would be nice to do this for the logs, but can't
+		-- ngx.var.server_name = rv
 
 		return rv
 	end
