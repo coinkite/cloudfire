@@ -1,6 +1,7 @@
 from flask import Flask, request, Response
 app = Flask(__name__)
 
+
 @app.route('/ws')
 def ws_test():
 	page = '''\

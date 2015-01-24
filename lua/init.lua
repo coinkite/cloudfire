@@ -37,6 +37,15 @@ if not oldpw then
 	config_table:set('passwd', 'hello')
 end
 
+-- list of channels we will accept
+local valid_channels, _ = config_table:get('channels')
+if not valid_channels then
+	config_table:set('channels', 'none')
+	ngx.log(ngx.INFO, 'RESET channel list')
+else
+	ngx.log(ngx.INFO, 'Valid channels: ', valid_channels)
+end
+
 --
 -- Some useful functions
 --
