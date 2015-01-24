@@ -25,8 +25,8 @@ def rxer(app):
 	RDB = app.redis
 
 	while 1:
-		here = RDB.blpop('websocket_rx')
-		print "Got: %r" % (here,)
+		vhost, here = RDB.blpop(('rx|none', 'rx|lh'))
+		print "Got %s: %r" % (vhost, here)
 	
 		
 

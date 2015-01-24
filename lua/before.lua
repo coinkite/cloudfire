@@ -11,6 +11,7 @@ local url = ngx.var.uri
 -- ngx.log(ngx.ERR, "BEFORE val = " .. url)
 
 if ngx.var.remote_addr == '127.0.0.1' then
+	-- need this so admin stuff can work easily.
 	return
 end
 

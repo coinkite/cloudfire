@@ -99,4 +99,26 @@ function get_RDB()
 	return RDB
 end
 
+function get_vhostname()
+	-- clean up the hostname from the client and convert into
+	-- a canonical name for a vhost
+	if ngx.ctx.vhostname then
+		-- cached copy
+		return ngx.ctx.vhostname
+	else
+		local rv = ngx.re.sub(ngx.var.host or '', "^(.*?)((:\\d*)|)$", "$1"):lower()
+
+		if rv == '' then
+			rv = 'none'
+		elseif rv == 'lh' or rv == 'localhost' or rv == '127.0.0.1' then
+			rv = 'lh'
+		end
+
+		-- save.
+		ngx.ctx.vhostname = rv
+
+		return rv
+	end
+end
+
 ngx.log(ngx.INFO, 'LUA code init done')

@@ -4,28 +4,11 @@
 local MAX_WS_PER_FID = 3
 local server = require "resty.websocket.server"
 
--- validate channel string, because it's unclean
-local subchan = ngx.var.query_string or 'none'
-local cleaned, n, err = ngx.re.sub(subchan, '^([a-z0-9A-Z.]{1,100})$', '$1')
-if cleaned ~= subchan or n ~= 1 or err then
-	LOG("got chan: " .. subchan .. " => " .. cleaned)
-	return ngx.exit(404)
-end
+-- no channels, but instead each virtual host has a grouping
+local vhost = get_vhostname()
 
 -- first of two connections to db
 local RDB = get_RDB()
-
--- check valid channel
-local valid_channels, _ = config_table:get('channels')
-if valid_channels then
-	if not valid_channels[subchan] then
-		LOG("unknown chan: " .. subchan)
-		return ngx.exit(404)
-	end
-else
-	-- this is a configuration error
-	LOG("Accepting any channel name!")
-end
 
 local wb, err = server:new({
 	timeout = 0,  				-- milliseconds
@@ -39,7 +22,7 @@ end
 -- document our status .. look almost an "object"; we're so OOP
 local fid = ngx.ctx.ACTIVE_FID
 local wsid = pick_token() -- fully unique id, as handle for this specific connection
-local STATE = { wsid = wsid, fid = fid, chan=subchan, sock=wb, die=die }
+local STATE = { wsid = wsid, fid = fid, vhost=vhost, sock=wb, die=die }
 
 STATE.die = function(STATE, msg)
 	-- connection is over.
@@ -67,7 +50,7 @@ if count and count > MAX_WS_PER_FID then
 end
 
 -- tell both client and server what their id's are.
-local public_state = { wsid = wsid, fid = ngx.ctx.ACTIVE_FID, chan=subchan }
+local public_state = { wsid = wsid, fid = ngx.ctx.ACTIVE_FID, vhost=vhost }
 RDB:sadd('sockets', wsid)
 RDB:hmset('sockets|wsid|' .. wsid, public_state)
 wb:send_text(cjson.encode(public_state))
@@ -81,14 +64,13 @@ STATE.report = function(STATE, XRDB, raw, is_closed)
 		m.msg = raw
 	end
 
-	XRDB:rpush('websocket_rx|' .. STATE.chan, cjson.encode(m))
+	XRDB:rpush('rx|' .. STATE.vhost, cjson.encode(m))
 end
 
 -- see https://github.com/openresty/lua-resty-websocket/issues/1#issuecomment-24816008
 local function client_rx(STATE)
 	local RDB = get_RDB()
 	local wb = STATE.sock
-	LOG("client_rx starts")
 
 	wb:set_timeout(0)
 	while true do
@@ -116,7 +98,7 @@ ngx.thread.spawn(client_rx, STATE)
 -- SUBSCRIBE -- cannot do normal redis after this.
 local ok, err = RDB:subscribe("bcast", 
 								"fid|"..fid,
-								"chan|"..subchan,
+								"vhost|"..vhost,
 								"wsid|"..wsid
 							)
 if not ok then
@@ -126,7 +108,7 @@ if not ok then
 end
 
 while true do 
-	-- read and wait for next event on subscription channel
+	-- read and wait for next event on subscription channels
 	local res, err = RDB:read_reply()
 	if not res then
 		if err == 'timeout' then
@@ -148,7 +130,7 @@ while true do
 				wb:send_close()
 			else
 				-- normal traffic on the channel; copy to websocket
-				local ok, err = wb:send_text(cjson.encode({chan=chan, msg=msg}))
+				local ok, err = wb:send_text(cjson.encode({src=chan, msg=msg}))
 				if not ok then
 					STATE:die("Couldn't write: " .. err)
 				end
