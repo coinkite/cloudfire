@@ -49,8 +49,7 @@ def start_server(ip, port, debug, redis_url):
 	app.redis = RDB
 	app.debug = True
 
-	from background import start_background
-	start_background(app)
+	app.start_bg_tasks()
 
 	# test redis is working early
 	try:

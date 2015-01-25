@@ -1,4 +1,6 @@
--- web socket handler
+--
+-- Web socket handler in lua+redis.
+--
 -- see https://github.com/openresty/lua-resty-redis/issues/46 near end
 
 local MAX_WS_PER_FID = 3
@@ -55,11 +57,11 @@ RDB:sadd('sockets', wsid)
 RDB:hmset('sockets|wsid|' .. wsid, public_state)
 wb:send_text(cjson.encode(public_state))
 
--- internal "methods". don't want to record these into redis tho
+-- method to send traffic to server
 STATE.report = function(STATE, XRDB, raw, state_changed)
 	m = { wsid=STATE.wsid, fid=STATE.fid }
 	if state_changed then
-		m.state = special
+		m.state = state_changed
 	else
 		m.msg = raw
 	end
