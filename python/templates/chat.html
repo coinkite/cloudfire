@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<title>CFC Chat Demo</title>
+
+<h2>CFC Chat Demo</h2>
+
+<button onclick="doSend('Hello!')">Say: Hello</button>
+<button onclick="doSend('Bye.')">Say: Bye</button>
+<button onclick="doSend('Testing 1, 2, 3...')">Say: Testing</button>
+
+<hr>
+<div id="output"></div>
+
+
+<script language="javascript" type="text/javascript">
+	{% include "websocket.js" with context %}
+</script>
