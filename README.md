@@ -2,7 +2,7 @@
 
 ### Open-Source Replacement for Cloudflare + Pubnub
 
-![CloudFIRE Logo](img/cloudfire.svg "CloudFIRE")
+![CloudFIRE Logo](img/cloudfire.png "CloudFIRE")
 
 After a recent outage, we wondered how hard it would be to replace
 [Cloudflare](https://cloudflare) and their robot-protection code.
@@ -134,14 +134,14 @@ we used FreeBSD 10.1 to host this project.
 - Lots more DDoS features could be added at the Lua layer. Like checking IP address
   black/white listing and rate limiting.
 
-- Big props to the folks at [openresty.org](http://openresty.org/) who've done
-  all the hard Lua stuff in this project.
+- Big props to the folks at [openresty.org](http://openresty.org/) who created all
+  the Lua tools we used this project.
 
 ## Future Directions
 
 Some things we might do if we had more time...
 
-- Lua placeholder HTMl templates should be uploadable or fetched from Redis.
+- Lua placeholder HTML templates should be uploadable or fetched from Redis.
   This would allow each vhost to customize the branding shown in their 404/502 pages.
 
 - The present `upload.py` code is poor and needs a rewrite. It should probably post to
