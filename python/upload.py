@@ -26,6 +26,7 @@ def blacklist_filename(fn):
 	return False
 
 def better_mimes(fname):
+	# sigh, mimetypes.guess_type is incomplete...
 	if fname.endswith('.svg'):
 		return 'image/svg+xml'
 	if fname.endswith('.md'):
@@ -69,11 +70,9 @@ def upload_file(host, fd, absurl):
 	needs_write = False
 
 	ct, enc = guess_type(absurl, strict=False)
-	print "%s = %s" % (absurl, ct)
 	if not ct:
 		ct = better_mimes(absurl)
-		if not ct:
-			ct = 'text/html'
+		assert ct, "No good mime type for: %s" % absurl
 	if not enc and ct and ct.startswith('text/'):
 		enc = 'utf-8'
 
@@ -125,7 +124,7 @@ def multi(baseurl, topdir):
 				continue
 			fname = os.path.join(root, fn)
 			url = os.path.join(baseurl, fname[len(topdir)+1:])
-			print '%s => %s' % (fname, url)
+			#print '%s => %s' % (fname, url)
 			wr = upload_file(host, click.open_file(fname), url)
 			if wr: needs_write = True
 

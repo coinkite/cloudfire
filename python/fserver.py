@@ -37,19 +37,18 @@ Redis URL spec:
 '''
 
 @click.command('start')
-@click.option('--port', '-p', default=9999)
+@click.option('--port', '-p', default=9999, help="FastCGI port number on localhost")
 @click.option('--ip', '-h', default='127.0.0.1')
-@click.option('--vhost', '-v', default='cloudfire-demo.coinkite.com')
+@click.option('--vhost', '-v', help="Virtual hostname to use")
 @click.option('--redis-url', '-r', default='redis://localhost:6379/', help="URL for Redis server")
-@click.option('--debug', '-d', is_flag=True, help="Runs locally as web server")
-def start_server(ip, port, debug, redis_url, vhost):
+@click.option('--devmode', '-d', is_flag=False, help="Runs locally as web server. Dev only")
+def start_server(ip, port, devmode, redis_url, vhost):
 	from example_app import app
 
 	RDB = redis.Redis.from_url(redis_url)
 
 	app.my_vhosts.append(vhost)
 	app.redis = RDB
-	app.debug = True
 
 	app.start_bg_tasks()
 
@@ -61,8 +60,9 @@ def start_server(ip, port, debug, redis_url, vhost):
 		sys.exit(1)
 
 
-	if debug:
-		app.run(host="0.0.0.0", port=port, debug=True)
+	if devmode:
+		app.debug = True
+		app.run(host="0.0.0.0", port=port)
 	else:
 		print "Running as FastCGI at %s:%d" % (ip, port)
 		MyWSGIServer(app, bindAddress=(ip, port), multiplexed=True, umask=0).run()
