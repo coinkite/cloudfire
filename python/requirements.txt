@@ -1,3 +1,5 @@
 flask
+redis
 flup
+click
 requests
