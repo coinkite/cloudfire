@@ -26,7 +26,7 @@ body {
 }
 
 #output {
-	height: 320px;
+	height: 500px;
 	overflow-y: scroll;
 }
 
@@ -40,10 +40,12 @@ body {
 
   </head>
   <body>
+
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
+<a href="https://github.com/coinkite/cloudfire"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"></a>
         <div class="navbar-header">
-          <a class="navbar-brand" href="#">CFC Demo</a>
+          <a class="navbar-brand" href="#">CloudFIRE Demo</a>
         </div>
       </div>
     </nav>
@@ -52,15 +54,34 @@ body {
 	  <div class="row">
 		<div class="col-md-7">
 			<h3>About</h3>
-			<p>
-				This is just a very simple demo of websocket-based chat. 
-				Much more is possible, including dynamic page content loading or
-				calling JS methods from the server side. The ultimate would be 
-				to load only a single HTML page, and then tell the browser to
-				fetch other resources only as needed.
-			</p>
-			<br>
-			<img src="/static/cloudfire.svg" style="width: 400px">
+
+<img src="/static/cloudfire.svg" style="width: 25%" align="right">
+<p>
+This is a demo of a a new full-stack for delivering web apps, called <b>CloudFIRE</b>.
+
+
+</p><p>
+It uses NGINX as the web server, and extends it with lots of custom Lua code. The Lua code
+runs inside the memory of the Nginx workers, and provides the following services:
+
+<ul>
+	<li> fake browser detection and blocking.
+	<li> basic session cookies.
+	<li> websocket fan-out / message passing
+	<li> content cache from redis and/or disk
+	<li> generalized virtual hosting: a single IP can host many domains
+	<li> technologies applied: Nginx, Lua, Redis, OpenResty, Websockets, FastCGI, Python, Flask, FreeBSD.
+</ul>
+
+</p><p>
+It can serve static content, dynamic content via FastCGI
+for each virtual host, and also serve static/cached content from Redis.
+</p><p>
+<a class="btn btn-primary" href="http://github.com/coinkite/cloudfire">Read more...</a>
+</p>
+
+
+
 		</div>
 		<div class="col-md-5">
 		  <div class="demo-template">
