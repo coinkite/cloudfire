@@ -1,0 +1,20 @@
+2c2
+< # $FreeBSD: head/www/nginx-devel/Makefile 377773 2015-01-23 23:28:00Z osa $
+---
+> # $FreeBSD: head/www/nginx-devel/Makefile 376243 2015-01-04 16:54:49Z osa $
+11c11
+< PKGNAMESUFFIX=	-devel
+---
+> PKGNAMESUFFIX=	-devel-cfc
+599,600c599,602
+< NGINX_LUA_VERSION=	0.9.4
+< GIT_LUA_VERSION=	0-g6169a19
+---
+> #XXX#NGINX_LUA_VERSION=	0.9.4
+> #XXX#GIT_LUA_VERSION=	0-g6169a19
+> NGINX_LUA_VERSION=	0.9.14
+> GIT_LUA_VERSION=	cea0699
+645c647
+< PASSENGER_VERSION=	4.0.58
+---
+> PASSENGER_VERSION=	4.0.57

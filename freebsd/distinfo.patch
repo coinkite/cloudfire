@@ -1,0 +1,6 @@
+67,68d66
+< SHA256 (openresty-lua-nginx-module-v0.9.4-0-g6169a19.tar.gz) = 4d869650d03a76d2811715aa10c962162315603b65794475be8aec682db29f4a
+< SIZE (openresty-lua-nginx-module-v0.9.4-0-g6169a19.tar.gz) = 470182
+112a111,113
+> SHA256 (openresty-lua-nginx-module-v0.9.14-cea0699.tar.gz) = 50686d4957704aed1646194bfbd0139d7f0fcaa43c6dc1a35833da08ed2ab433
+> SIZE (openresty-lua-nginx-module-v0.9.14-cea0699.tar.gz) = 519101
