@@ -160,7 +160,7 @@ class CFCFlask(Flask):
 		rv.created()
 		return rv
 
-	def tx(self, msg, conn = None, fid=None, wsid=None, bcast=False):
+	def tx(self, msg, conn=None, fid=None, wsid=None, bcast=False):
 		'''
 			Send a message via websocket to a specific browser, specific tab (wsid) or all
 
@@ -185,17 +185,23 @@ class CFCFlask(Flask):
 
 	def ws_close(self, wsid_or_conn):
 		'''
-			Close a specific web socket from server side; perhaps because it mis-behaved.
+			Close a specific web socket from server side.
 
 			LUA code detects this message and kills it's connection.
 		'''
 		self.tx('CLOSE', wsid=getattr(wsid_or_conn, 'wsid', wsid_or_conn))
 
+	def ws_kill(self, conn):
+		'''
+			Close all web sockets from server side; because user mis-behaved, and
+			also kill it's session on CFC. User will have to wait for javascript POW.
+		'''
+		self.tx('KILL', fid=conn.fid)
+
 	@setupmethod
 	def ws_rx_handler(self, f):
 		"""
 			Registers a function to be called when traffic is received via web sockets
-
 		"""
 		self.ws_rx_handlers.append(f)
 		return f

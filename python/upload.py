@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 #
+# A program to demonstate how to upload a static website into the CFC. 
+#
+# You'd need to run it a few times:
+#	- upload content with "upload.py multi path-to-topdir"
+#	- commit that to disk in CFC: "upload.py write"
+#	- add some redirects, like root => index.html
+#	- 		./upload.py redirect / /index.html
+#
+#
 import os, sys, re, requests
 from redis import Redis
 import click

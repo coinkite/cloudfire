@@ -1,3 +1,7 @@
+-- Very limited "admin" interface via web.
+-- 
+-- Default password is "hello" so change that!
+-- 
 -- see: https://github.com/openresty/lua-nginx-module#nginx-api-for-lua
 
 -- must be before any content
@@ -12,7 +16,7 @@ if err then
 end
 
 local curpw, _ = config_table:get('passwd')
-ngx.log(ngx.INFO, 'PW = ' .. curpw)
+--ngx.log(ngx.INFO, 'PW = ' .. curpw)
 
 if args.pw ~= curpw  then
 	LOG("Wrong PW")

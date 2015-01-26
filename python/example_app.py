@@ -12,6 +12,7 @@ def rx_data(vhost, conn, msg):
 	app.tx(m, bcast=True)
 
 class Robot(object):
+	" Just a super-simple robot "
 	def __init__(self):
 		self.heard = set()
 
@@ -30,7 +31,7 @@ class Robot(object):
 
 			user = conn.fid[-8:].upper()
 			if user not in self.heard:
-				m = {'from': 'Robot1', 'content': "Hello %s" % user}
+				m = {'from': 'Robot1', 'content': "Hello %s. Looking good!" % user}
 				app.tx(m, bcast=True)
 				self.heard.add(user)
 
