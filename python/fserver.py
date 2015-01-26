@@ -39,13 +39,15 @@ Redis URL spec:
 @click.command('start')
 @click.option('--port', '-p', default=9999)
 @click.option('--ip', '-h', default='127.0.0.1')
+@click.option('--vhost', '-v', default='cloudfire-demo.coinkite.com')
 @click.option('--redis-url', '-r', default='redis://localhost:6379/', help="URL for Redis server")
 @click.option('--debug', '-d', is_flag=True, help="Runs locally as web server")
-def start_server(ip, port, debug, redis_url):
+def start_server(ip, port, debug, redis_url, vhost):
 	from example_app import app
 
 	RDB = redis.Redis.from_url(redis_url)
 
+	app.my_vhosts.append(vhost)
 	app.redis = RDB
 	app.debug = True
 

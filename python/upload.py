@@ -18,11 +18,18 @@ from urlparse import urlparse
 
 MIN_Q_SIZE = 8000
 RDB = None
+admin_pw = None
 
 def blacklist_filename(fn):
 	if fn.startswith('.git'): return True
 	if fn.startswith('.') and '.sw' in fn: return True
 	return False
+
+def better_mimes(fname):
+	if fname.endswith('.svg'):
+		return 'image/svg+xml'
+	if fname.endswith('.md'):
+		return 'text/plain'
 
 def log_path(url, msg):
 	click.echo("%-50.50s %s" % (url, msg))
@@ -35,14 +42,17 @@ def url_to_key(host, absurl):
 @click.group()
 @click.option('--sock', default='~/redis.sock')
 @click.option('--redis', default=None)
-def cli(sock, redis):
-	global RDB
+@click.option('--password', '-p',  default='hello')
+def cli(sock, redis, password):
+	global RDB, admin_pw
 	if not redis:
 		click.echo("Using redis via unix socket: %s" % sock)
 		RDB = Redis(unix_socket_path=os.path.expanduser(sock))
 	else:
 		click.echo("Using redis @: %s" % redis)
-		RDB = Redis(unix_socket_path=os.path.expanduser(hostname=redis))
+		RDB = redis.Redis.from_url(redis)
+
+	admin_pw = password
 	
 
 @cli.command('single', help="Upload a single file as response for specific URL")
@@ -56,10 +66,14 @@ def upload_file(host, fd, absurl):
 	rk = url_to_key(host, absurl)
 	content = fd.read()
 	rv = {}
+	needs_write = False
 
 	ct, enc = guess_type(absurl, strict=False)
+	print "%s = %s" % (absurl, ct)
 	if not ct:
-		ct = 'text/html'
+		ct = better_mimes(absurl)
+		if not ct:
+			ct = 'text/html'
 	if not enc and ct and ct.startswith('text/'):
 		enc = 'utf-8'
 
@@ -68,6 +82,7 @@ def upload_file(host, fd, absurl):
 
 	if ll < MIN_Q_SIZE:
 		rv['_content'] = content
+		log_path(absurl, 'In-Memory')
 	else:
 		hh = MD5(content).hexdigest()
 		if '.' in absurl:
@@ -76,6 +91,7 @@ def upload_file(host, fd, absurl):
 			hh += '.' + ext
 		
 		rv['_hash'] = hh
+		needs_write = True
 
 		if not RDB.hexists('new_files', hh) and not RDB.sismember('all_files', hh):
 			RDB.hset('new_files', hh, content)
@@ -87,32 +103,45 @@ def upload_file(host, fd, absurl):
 	#print "%s => %r" % (rk, rv)
 	RDB.hmset(rk, rv)
 
+	return needs_write
 	
 
 @cli.command(help="Upload a tree of files")
-@click.option('--host', '-i', default="lh")
-@click.option('--baseurl', '-u',  default='/')
+@click.argument('baseurl')
 @click.argument('topdir', type=click.Path(exists=True))
-def multi(host, baseurl, topdir):
-	assert host == host.lower()
+def multi(baseurl, topdir):
+	parts = urlparse(baseurl)
+	host = parts.netloc.lower()
+	baseurl = parts.path
+	
+	host = host.lower()
 	assert baseurl[0] == '/'
 
+	needs_write = False
 	for root, dirs, files in os.walk(topdir):
 		for fn in files:
 			if blacklist_filename(fn):
 				log_path(fn, 'junk')
 				continue
 			fname = os.path.join(root, fn)
-			url = os.path.join(baseurl, fname[len(topdir):])
-			#print '%s => %s' % (fname, url)
-			upload_file(host, click.open_file(fname), url)
+			url = os.path.join(baseurl, fname[len(topdir)+1:])
+			print '%s => %s' % (fname, url)
+			wr = upload_file(host, click.open_file(fname), url)
+			if wr: needs_write = True
 
-	click.echo("Remember: You still need to tell server to save the files, see 'write' cmd")
+	if needs_write:
+		do_write()
+	#click.echo("Remember: You still need to tell server to save the files, see 'write' cmd")
 
 @cli.command(help="Reset entire redis database!")
 def flushdb():
 	RDB.flushdb()
 	click.echo("Wiped database")
+
+@cli.command(help="Show what's in redis cache")
+def dump():
+	k = RDB.keys('*|/*')
+	print '\n'.join(k)
 
 @cli.command(help="List defined urls for host")
 @click.option('--wipe', '-w', is_flag=True, help="Wipe them.")
@@ -149,9 +178,11 @@ def redirect(host, code, from_url, to):
 	click.echo("Added: %s => %s" % (from_url, to))
 
 @cli.command(help="Commit uploaded files to disk cache")
-@click.option('--password', '-p',  default='hello')
-def write(password):
-	r = requests.get('http://localhost/__A__/save?pw=%s' % password)
+def write():
+	do_write()
+
+def do_write():
+	r = requests.get('http://localhost/__A__/save?pw=%s' % admin_pw)
 	print r.content
 
 if __name__ == '__main__':
