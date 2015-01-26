@@ -1,6 +1,6 @@
 #
 import time
-from flask import Flask, json
+from flask import Flask, json, request
 from flask.app import setupmethod
 from threading import Thread
 
@@ -10,7 +10,7 @@ class DaemonThread(Thread):
 		super(DaemonThread, self).start()
 
 class WSConnection(object):
-	def __init__(self, app, fid, wsid):
+	def __init__(self, app, wsid, fid):
 		self.app = app
 		self.fid = fid
 		self.wsid = wsid
@@ -18,16 +18,27 @@ class WSConnection(object):
 	def __repr__(self):
 		return '<WSConnection %s fid=..%s>' % (self.wsid, self.fid[-4:])
 
-	def open(self):
+	def created(self):
 		# do something when first connected
+		print "%r: created" % self
 		pass
 
 	def closed(self):
-		# do something after closed; cannot send messages at this point
+		# do something after being closed, but cannot send messages at this point
+		print "%r: closed" % self
 		pass
 
 	def tx(self, msg):
-		self.app.tx(msg, wsid=self.wsid)
+		self.app.tx(msg, conn=self)
+
+class CFCContextVars(object):
+	# This class is put into the context of all templates as "CFC"
+	# 
+	@property
+	def WEBSOCKET_URL(self):
+		" Provide a URL for the websocket to be used "
+		scheme = request.environ['wsgi.url_scheme']
+		return '%s://%s/__W__' % ('ws' if scheme == 'http' else 'wss', request.host)
 
 class CFCFlask(Flask):
 	''' Extensions to Flask() object to support app needs for CFC frontend '''
@@ -45,20 +56,33 @@ class CFCFlask(Flask):
 	ping_rate = 15		# seconds
 
 	def __init__(self, *a, **kws):
-		# list of functions that want to receive data from websocket clients
+
+		# List of functions that want to receive data from websocket clients
+		# Extend this using the decorator app.ws_rx_handler
 		self.ws_rx_handlers = []
 
 		# map of all current connections
 		self.ws_connections = {}
 
+		# Domains we are implementing today; lowercase, canonical names only.
+		# you can still redirect www. variations and such, but don't include them
+		# in this list.
 		self.my_vhosts = kws.pop('vhosts', ['lh', 'none'])
+
+		# We need some threads. You can add yours too, by decorating with
+		# app.background_task
+		self.ws_background_tasks = [ self.pinger, self.rxer ]
 		
 		super(CFCFlask, self).__init__(*a, **kws)
+
+		@self.context_processor
+		def extra_ctx():
+			return dict(CFC = CFCContextVars())
 
 	def pinger(self):
 		# Keep all connections alive with some minimal traffic
 		RDB = self.redis
-		RDB.publish('bcast', 'server restart')
+		#RDB.publish('bcast', 'RESTART')
 
 		while 1:
 			RDB.publish('bcast', 'PING')
@@ -79,8 +103,7 @@ class CFCFlask(Flask):
 			vhost = vhost[3:]
 			assert vhost in self.my_vhosts, "Unexpended hostname: %s" % vhost
 
-			# Data from WS is wrapped in some json by LUA code. Trustable.
-			self.logger.debug('before = %r' % here)
+			# This data from WS is already wrapped as JSON by LUA code. Trustable.
 			try:
 				here = json.loads(here)
 			except:
@@ -109,24 +132,32 @@ class CFCFlask(Flask):
 			conn = self.ws_connections.get(wsid, None)
 			if not conn:
 				# this will happen if you restart python while the nginx/lua stays up
-				self.logger.warn('New WSID')
+				self.logger.warn('Existing/unexpected WSID')
 				conn = self.ws_new_connection(wsid, fid)
 				
 			# Important: do not trust "msg" here as it comes
 			# unverified from browser-side code. Could be nasty junk.
-			self.logger.debug('here = %r' % here)
 			msg = here.get('msg', None)
+
+			if msg[0] == '{' and msg[-1] == '}':
+				# looks like json
+				try:
+					msg = json.loads(msg)
+				except:
+					self.logger.debug('RX[%s] got bad JSON: %r' % (vhost, msg))
+					
 
 			for handler in self.ws_rx_handlers:
 				handler(vhost, conn, msg)
 
-			self.logger.debug('RX[%s] %r' % (vhost, msg))
+			if not self.ws_rx_handlers:
+				self.logger.debug('RX[%s] %r' % (vhost, msg))
 
 	def ws_new_connection(self, wsid, fid):
 		''' New WS connection, track it.
 		'''
 		self.ws_connections[wsid] = rv = WSConnection(self, wsid, fid)
-		rv.open()
+		rv.created()
 		return rv
 
 	def tx(self, msg, conn = None, fid=None, wsid=None, bcast=False):
@@ -146,27 +177,40 @@ class CFCFlask(Flask):
 		elif bcast:
 			chan = 'bcast'
 
+		if not isinstance(msg, basestring):
+			# convert into json, if not already
+			msg = json.dumps(msg)
+
 		self.redis.publish(chan, msg)
 
-	def ws_close(self, wsid):
+	def ws_close(self, wsid_or_conn):
 		'''
 			Close a specific web socket from server side; perhaps because it mis-behaved.
 
 			LUA code detects this message and kills it's connection.
 		'''
-		self.tx('CLOSE', wsid=wsid)
+		self.tx('CLOSE', wsid=getattr(wsid_or_conn, 'wsid', wsid_or_conn))
 
 	@setupmethod
 	def ws_rx_handler(self, f):
-		"""Registers a function to be called when traffic is received via web sockets
+		"""
+			Registers a function to be called when traffic is received via web sockets
 
 		"""
 		self.ws_rx_handlers.append(f)
+		return f
+
+	@setupmethod
+	def background_task(self, f):
+		"""
+			Registers a function to be run as a background thread
+		"""
+		self.ws_background_tasks.append(f)
 		return f
 			
 
 	def start_bg_tasks(self):
 		''' start long-lived background threads '''
-		DaemonThread(name="pinger", target=self.pinger, args=[]).start()
-		DaemonThread(name="rxer", target=self.rxer, args=[]).start()
+		for fn in self.ws_background_tasks:
+			DaemonThread(name=fn.__name__, target=fn, args=[]).start()
 

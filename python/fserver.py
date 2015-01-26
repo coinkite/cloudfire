@@ -60,7 +60,7 @@ def start_server(ip, port, debug, redis_url):
 
 
 	if debug:
-		app.run(host="0.0.0.0", port=port)
+		app.run(host="0.0.0.0", port=port, debug=True)
 	else:
 		print "Running as FastCGI at %s:%d" % (ip, port)
 		MyWSGIServer(app, bindAddress=(ip, port), multiplexed=True, umask=0).run()

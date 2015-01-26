@@ -133,7 +133,7 @@ while true do
 				wb:send_close()
 			else
 				-- normal traffic on the channel; copy to websocket
-				local ok, err = wb:send_text(cjson.encode({src=chan, msg=msg}))
+				local ok, err = wb:send_text(msg)
 				if not ok then
 					STATE:die("Couldn't write: " .. err)
 				end

@@ -1,4 +1,4 @@
-var wsUri = "ws://{{request.host}}/___WS";
+var wsUri = "{{CFC.WEBSOCKET_URL}}";
 
 var output;
 function init() {
@@ -22,16 +22,11 @@ function onClose(evt) {
 
 function onMessage(evt) {
 
-	var frame = JSON.parse(evt.data);
-	console.log("rx=", frame);
+	var msg = JSON.parse(evt.data);
+	console.log("msg=", msg);
 
-	if(!frame.msg) return;
-
-	var app = JSON.parse(frame.msg);
-	console.log("app=", app);
-
-	if(app) {
-		writeToScreen('<span style="color: blue;">' + app.from + ':</span> ' + app.content);
+	if(msg.from) {
+		writeToScreen('<span style="color: blue;">' + msg.from + ':</span> ' + msg.content);
 	}
 }
 function onError(evt) {
@@ -39,7 +34,6 @@ function onError(evt) {
 }
 function doSend(message) {
 	message = JSON.stringify({'say': message});
-	//writeToScreen("TX: " + message);
 	websocket.send(message);
 }
 function writeToScreen(message) {
@@ -47,6 +41,9 @@ function writeToScreen(message) {
 	pre.style.wordWrap = "break-word";
 	pre.innerHTML = message;
 	output.appendChild(pre);
+
+	$(output).scrollTop($(output)[0].scrollHeight);
+
 }
 
 window.addEventListener("load", init, false);

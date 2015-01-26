@@ -1,17 +1,88 @@
 <!DOCTYPE html>
-<meta charset="utf-8" />
-<title>CFC Chat Demo</title>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bootstrap 101 Template</title>
 
-<h2>CFC Chat Demo</h2>
+    <!-- Bootstrap -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap-theme.min.css">
 
-<button onclick="doSend('Hello!')">Say: Hello</button>
-<button onclick="doSend('Bye.')">Say: Bye</button>
-<button onclick="doSend('Testing 1, 2, 3...')">Say: Testing</button>
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
 
-<hr>
-<div id="output"></div>
+<style>
+body {
+  padding-top: 50px;
+}
+.demo-template {
+  padding: 40px 15px;
+}
+
+#output {
+	max-height: 320px;
+	overflow-y: scroll;
+}
+
+#output pre {
+	padding: 4px;
+	margin: 0;
+}
+</style>
 
 
-<script language="javascript" type="text/javascript">
-	{% include "websocket.js" with context %}
-</script>
+
+  </head>
+  <body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#">CFC Demo</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+	  <div class="row">
+		<div class="col-md-7">
+			<h3>About</h3>
+			<p>
+				This is just a very simple demo of websocket-based chat. 
+				Much more is possible, including dynamic page content loading or
+				calling JS methods from the server side. The ultimate would be 
+				to load only a single HTML page, and then tell the browser to
+				fetch other resources only as needed.
+			</p>
+		</div>
+		<div class="col-md-5">
+		  <div class="demo-template">
+			<h3>Chat Box</h3>
+
+			<button class="btn btn-default" onclick="doSend('Hello!')">Say: Hello</button>
+			<button class="btn btn-default" onclick="doSend('Bye.')">Say: Bye</button>
+			<button class="btn btn-default" onclick="doSend('Testing 1, 2, 3...')">Say: Testing</button>
+
+			<hr>
+			<div id="output"></div>
+		  </div>
+		</div>
+	</div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+
+	<script language="javascript" type="text/javascript">
+		{% include "websocket.js" with context %}
+	</script>
+
+  </body>
+</html>
+
+
+
